@@ -7,22 +7,22 @@ knife and gun - 1
 
 Images : 
 
-Bags		gun(G) 	shuricane(S)	knife(K)	Taken
+Bags		gun(G) 	shuricane(S)	knife(K)	Taken       ChangeInDataSet
 
-1			1		1				0			Y(G,S)
-2			0		0				1			Y(2 K)
-3			0		1				0			Y(2 S)
-4			0		1				0			Y(S)
+1			1		1				0			Y(G,S)      Y(110)
+2			0		0				1			Y(2 K)      
+3			0		1				0			Y(2 S)      
+4			0		1				0			Y(S)        Y(010)
 5			1		0				0			Y(2 G)
 6			1		0				0			Y(2 G)
 7			1		0				0			N(2 G)
 8			1		0				0			N(2 G)
-9			0		1				0			Y(S)
-10			0		0				1			Y(K)
-11			0		0				1			Y(G,K) - p			
-12			1		0				0			Y(G)
+9			0		1				0			Y(S)        
+10			0		0				1			Y(K)        Y(001)
+11			1		0				1			Y(G,K)		Y(101)	
+12			1		0				0			Y(G)        Y(100)
 13			1		0				0			Y(G)
-14			1		0				0			N(G)
+14			1		0				0			N(G)        
 15			1		0				0			N(G)
 16			1		0				0			N(G)
 17			1		0				0			N(G)

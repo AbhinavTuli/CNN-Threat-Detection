@@ -1,9 +1,10 @@
-
+# find . -name ".DS_Store" -delete
 import os
 import numpy as np
 import tensorflow as tf
 
 from skimage.io import imread
+from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 
 from tensorflow.keras import regularizers
@@ -14,56 +15,97 @@ from tensorflow.keras.layers import Concatenate
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint
 from tensorflow.keras.optimizers import Adam, SGD
+# import tf.keras.callbacks.EarlyStopping
+
+from sklearn.preprocessing import MultiLabelBinarizer
+
 
 import pickle
 
 # define parameters
 CLASS_NUM = 3
 BATCH_SIZE = 128
-EPOCH_STEPS = int(1800/BATCH_SIZE)
+EPOCH_STEPS = int(1978/BATCH_SIZE)
 IMAGE_SHAPE = (224, 224, 3)
-IMAGE_TRAIN = '/home/smartyy-pants/Documents/Ceeri/CNN-Threat-Detection/ImagesVladmir/Images/'
+IMAGE_TRAIN = '/Users/abhinav/Documents/CNN-Threat-Detection/Data/Images/'
+IMAGE_TEST = '/Users/abhinav/Documents/CNN-Threat-Detection/Data/Test/'
+
 MODEL_NAME = 'googlenet_dualInput_threat.h5'
 
 model = None
 
 as_gray = True
-in_channel = 4
 
-if as_gray:
-  in_channel = 1
-
-def read_images(file_paths, as_gray, channels):
-  images = []
-  for file_path in file_paths:
-    images.append(imread(file_path, as_gray = as_gray))
+def read_images(file_paths, as_gray):
+    images = []
+    ct=0
+    for i,file_path in enumerate(file_paths):
+        print("Reading Image ",ct," : ",file_path)
+        try:
+            image = imread(file_path, as_gray = as_gray)
+            image = resize(image,IMAGE_SHAPE)
+            image = image / 255.0
+            images.append(image)
+            ct+=1
+        except Exception as e:
+            print(e)
     
-  images = np.asarray(images, dtype=np.float32)
-  # normalize
-  images = images / 255.0 #np.max(images)
-  # reshape to match Keras expectaions
-  images = images.reshape(images.shape[0], IMAGE_SHAPE[0], IMAGE_SHAPE[1], channels)
-  return images
+    images = np.asarray(images, dtype=np.float32)
+    return images
 
 # prepare data
-def getData():
+def getData(IMG_PATH=IMAGE_TRAIN):
     data = []   # n*3 format
-    folders = os.listdir(IMAGE_TRAIN)
+    y = []
+    folders = os.listdir(IMG_PATH)
     for folder in folders:
-        print("Reading Images in ",os.path.join(IMAGE_TRAIN,folder,""))
-        all_pairs = os.listdir(os.path.join(IMAGE_TRAIN,folder,""))
-        for pairs in all_pairs:
-            images = os.listdir(os.path.join(IMAGE_TRAIN,folder,pairs,""))
-            pair_data = []
-            for image in images:
-                pair_data.append(os.path.join(IMAGE_TRAIN,folder,pairs,image,""))
+        print("Reading Images Path in ",os.path.join(IMG_PATH,folder,""))
+        try:
+            all_pairs = os.listdir(os.path.join(IMG_PATH,folder,""))
+            for pairs in all_pairs:
+                try:
+                    images = os.listdir(os.path.join(IMG_PATH,folder,pairs,""))
+                except Exception as e:
+                    print(e)
+                    
+                pair_data = []
+                for image in images:
+                    try:
+                        pair_data.append(os.path.join(IMG_PATH,folder,pairs,image,""))
+                    except Exception as e:
+                        print(e)
+                    
+                label = folder
+                # label = list(int(i) for i in list(folder))
+                # namelist=[]
+                # if label==[0,0,1]:
+                #     label = ['Knife']
+                # elif label==[0,1,0]:
+                #     label = ['Shuriken']
+                # elif label==[1,0,0]:
+                #     label = ['Gun']
+                # elif label==[1,1,0]:
+                #     label = ['Gun','Shuriken']
+                # elif label==[1,0,1]:
+                #     label = ['Gun','Knife']
+                # elif label==[0,0,0]:
+                #     label=[]
+
                 
-            label = [int(i) for i in list(folder)] 
-            pair_data.append(label)
-            data.append(pair_data)
-            
-    np.random.shuffle(data)
-    return data
+                # ['Knife']
+                # ['Shuricane']
+                # ['Gun','Shuricane']
+                # ['Gun','Knife']
+                #arr=[1]*len(label)
+                # pair_data.append(tlist)
+                
+                y.append(label)
+                data.append(pair_data)
+        except Exception as e:
+            print(e)
+  
+    # np.random.shuffle(data)
+    return data,y
     
 # create model
 def inception(x, filters):
@@ -150,31 +192,46 @@ def dualInputModel():
     
     main = Dense(units=CLASS_NUM, activation='sigmoid', name='main')(layer)
     
-    aux1_final = combineAuxiliary(network1[2],network2[2],'aux1_final')
-    aux2_final = combineAuxiliary(network1[3],network2[3],'aux2_final')
+    # aux1_final = combineAuxiliary(network1[2],network2[2],'aux1_final')
+    # aux2_final = combineAuxiliary(network1[3],network2[3],'aux2_final')
     
-    model = Model(inputs=[input_1,input_2], outputs=[main, aux1_final, aux2_final])
+    # model = Model(inputs=[input_1,input_2], outputs=[main, aux1_final, aux2_final])
+    model = Model(inputs=[input_1,input_2], outputs=main)
     
     return model
 
 data = []
+y = []
+data,y = getData(IMAGE_TRAIN)
+y = np.array(y)
 
-if os.path.isfile('Images_path.pkl'): 
-    with open(r"Images_path.pkl", "rb") as input_file:
-        data = pickle.load(input_file)
-else:
-    data = getData()
-    with open(r"Images_path.pkl", "wb") as output_file:
-        pickle.dump(data, output_file)
-    
+# mlb = MultiLabelBinarizer(classes=("Gun","Knife","Shuriken"))
+# y = mlb.fit_transform(y)
+
+# print(y.shape)
+# print(y[0])
+# print("Classes ",list(mlb.classes_))
+
 data = np.array(data)
-x1_loc, x2_loc, y = data.T
-x1 = read_images(x1_loc,as_gray,in_channel)
-x2 = read_images(x2_loc,as_gray,in_channel)
+
+x1_loc, x2_loc = data.T
+
+x1 = None
+x2 = None
+
+if os.path.isfile('Images.pkl'): 
+    with open(r"Images.pkl", "rb") as input_file:
+        x1,x2 = pickle.load(input_file)
+else:
+    with open(r"Images.pkl", "wb") as output_file:
+        x1 = read_images(x1_loc,as_gray)
+        x2 = read_images(x2_loc,as_gray)
+        pickle.dump((x1,x2), output_file)
+
 
 x_train_comp = np.stack((x1, x2), axis=4)
 
-x_train, x_test, y_train, y_test = train_test_split(x_train_comp, y, test_size = 0.3, random_state=666)
+x_train, x_test, y_train, y_test = train_test_split(x_train_comp, y, test_size = 0.1, random_state=666)
 
 # take them apart
 x1_train = x_train[:,:,:,:,0]
@@ -183,14 +240,19 @@ x1_test = x_test[:,:,:,:,0]
 x2_train = x_train[:,:,:,:,1]
 x2_test = x_test[:,:,:,:,1]
 
-
-def train():
+def train(model=None):
+ 
+        # print(type(y_train),y_train.shape)
+        # print(type(y_test),y_test.shape)
+        # print(y_train[0])
+        # print(y_test[0])
+        #exit(0)
+    
         # data  :   1800*3
-
         optimizer = Adam(lr=2 * 1e-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
         # optimizer = SGD(lr=1 * 1e-1, momentum=0.9, nesterov=True)
-        model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        # model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+        # model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=optimizer, metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
         # epochs = [20, 30, 20, 30]
         epochs=[5,5,5,5]
         history_all = {}
@@ -199,48 +261,23 @@ def train():
 
         callbacks = [checkpoint]
 
+        # callbacks = [EarlyStoppingAtMinLoss(monitor='val_loss',
+        #                       min_delta=0,
+        #                       patience=0,
+        #                       verbose=0, mode='auto')]
+
         model.fit([x1_train, x2_train], y_train,
                 batch_size=BATCH_SIZE,
-                epochs=5,
-                callbacks=callbacks,
-                verbose=1,
+                epochs=10,
                 validation_data=([x1_test, x2_test], y_test),
-                shuffle=True)
+                shuffle=True,
+                callbacks=callbacks)
+        
+        model.save(MODEL_NAME)
 
 def test():
     # load weights
     model.load_weights(MODEL_NAME)
-    final_loss, final_acc = model.evaluate([x1_test, x2_test], y_test, verbose=1)
-    print("Final loss: {0:.6f}, final accuracy: {1:.6f}".format(final_loss, final_acc))     
-
-def __init__():
-    model = dualInputModel()
-    # model.summary()
-    # model.load_weights(MODEL_NAME)
-    # tf.keras.utils.plot_model(model, 'GoogLeNet.png')
-    train()
-    # test()
     
-    
-#     # save history    
-#     if len(history_all) == 0:
-#         history_all = {key: [] for key in train_history.history}
-    
-#     for key in history_all:
-#         history_all[key].extend(train_history.history[key])
 
-# model.save(MODEL_NAME)
-
-# # show train history
-# def show_train_history(history, xlabel, ylabel, train):
-#     for item in train:
-#         plt.plot(history[item])
-#     plt.title('Train History')
-#     plt.xlabel(xlabel)
-#     plt.ylabel(ylabel)
-#     plt.legend(train, loc='upper left')
-#     plt.show()
-
-# show_train_history(history_all, 'Epoch', 'Accuracy', ('main_acc', 'aux1_acc', 'aux2_acc'))
-# show_train_history(history_all, 'Epoch', 'Loss', ('main_loss', 'aux1_loss', 'aux2_loss'))
-
+train() 
