@@ -1,0 +1,30 @@
+shuricane - 3
+knife - 2
+gun - 12
+
+gun and shuricane - 1
+knife and gun - 1
+
+Images : 
+
+Bags		gun(G) 	shuricane(S)	knife(K)	Taken
+
+1			1		1				0			Y(G,S)
+2			0		0				1			Y(2 K)
+3			0		1				0			Y(2 S)
+4			0		1				0			Y(S)
+5			1		0				0			Y(2 G)
+6			1		0				0			Y(2 G)
+7			1		0				0			N(2 G)
+8			1		0				0			N(2 G)
+9			0		1				0			Y(S)
+10			0		0				1			Y(K)
+11			0		0				1			Y(G,K) 
+12			1		0				0			Y(G)
+13			1		0				0			Y(G)
+14			1		0				0			N(G)
+15			1		0				0			N(G)
+16			1		0				0			N(G)
+17			1		0				0			N(G)
+18			1		0				0			N(G)
+19			1		0				0			N(G)
